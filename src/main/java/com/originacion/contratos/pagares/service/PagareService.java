@@ -13,7 +13,7 @@ import com.originacion.contratos.pagares.exception.PagareGenerationException;
 import com.originacion.contratos.contratos.model.Contrato;
 import com.originacion.contratos.pagares.model.Pagare;
 import com.originacion.contratos.pagares.repository.PagareRepository;
-import com.banquito.sistema.originacion.model.SolicitudCredito;
+import com.originacion.contratos.model.SolicitudCredito;
 
 @Service
 public class PagareService {

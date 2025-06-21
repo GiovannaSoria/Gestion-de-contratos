@@ -10,7 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import com.banquito.sistema.originacion.model.SolicitudCredito;
+import com.originacion.contratos.model.SolicitudCredito;
 
 @Entity
 @Table(name = "contratos")

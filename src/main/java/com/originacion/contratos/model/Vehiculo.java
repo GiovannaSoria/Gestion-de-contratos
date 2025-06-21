@@ -1,4 +1,4 @@
-package com.banquito.sistema.originacion.model;
+package com.originacion.contratos.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -61,16 +61,16 @@ public class Vehiculo {
     })
     private IdentificadorVehiculo identificadorVehiculo;
 
-    @ManyToOne
-    @JoinColumn(name = "IdConcesionario", referencedColumnName = "IdConcesionario", insertable = false, updatable = false)
-    @JsonIgnoreProperties({
-        "direccion",
-        "telefono",
-        "emailContacto",
-        "estado",
-        "version"
-    })
-    private Concesionario concesionario;
+    // @ManyToOne
+    // @JoinColumn(name = "IdConcesionario", referencedColumnName = "IdConcesionario", insertable = false, updatable = false)
+    // @JsonIgnoreProperties({
+    //     "direccion",
+    //     "telefono",
+    //     "emailContacto",
+    //     "estado",
+    //     "version"
+    // })
+    // private Concesionario concesionario;
 
     public Vehiculo() {
     }
@@ -159,13 +159,14 @@ public class Vehiculo {
         this.identificadorVehiculo = identificadorVehiculo;
     }
 
-    public Concesionario getConcesionario() {
-        return concesionario;
-    }
+    // TODO: Descomentar cuando esté disponible la clase Concesionario
+    // public Concesionario getConcesionario() {
+    //     return concesionario;
+    // }
 
-    public void setConcesionario(Concesionario concesionario) {
-        this.concesionario = concesionario;
-    }
+    // public void setConcesionario(Concesionario concesionario) {
+    //     this.concesionario = concesionario;
+    // }
 
     public Long getVersion() {
         return version;
@@ -212,8 +213,7 @@ public class Vehiculo {
     public String toString() {
         return "Vehiculo [id=" + id + ", idIdentificadorVehiculo=" + idIdentificadorVehiculo + ", idConcesionario="
                 + idConcesionario + ", marca=" + marca + ", modelo=" + modelo + ", anio=" + anio + ", valor=" + valor
-                + ", color=" + color + ", extras=" + extras + ", identificadorVehiculo=" + identificadorVehiculo
-                + ", concesionario=" + concesionario + "]";
+                + ", color=" + color + ", extras=" + extras + ", identificadorVehiculo=" + identificadorVehiculo + "]";
     }
 
 }

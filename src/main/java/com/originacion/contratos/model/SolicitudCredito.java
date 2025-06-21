@@ -1,4 +1,4 @@
-package com.banquito.sistema.originacion.model;
+package com.originacion.contratos.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -31,10 +31,11 @@ public class SolicitudCredito {
     @JsonIgnoreProperties({"idIdentificadorVehiculo", "idConcesionario", "valor", "color", "extras", "estado", "version", "identificadorVehiculo", "concesionario"})
     private Vehiculo vehiculo;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "IdVendedor", nullable = false)
-    @JsonIgnoreProperties({"idConcesionario", "telefono", "email", "estado", "version", "concesionario"})
-    private Vendedor vendedor;
+    // TODO: Agregar referencia a Vendedor cuando esté disponible el módulo correspondiente
+    // @ManyToOne(optional = false)
+    // @JoinColumn(name = "IdVendedor", nullable = false)
+    // @JsonIgnoreProperties({"idConcesionario", "telefono", "email", "estado", "version", "concesionario"})
+    // private Vendedor vendedor;
 
     @Column(name = "MontoSolicitado", precision = 12, scale = 2, nullable = false)
     private BigDecimal montoSolicitado;
@@ -79,9 +80,10 @@ public class SolicitudCredito {
     @Transient
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private Long idVehiculo;
-    @Transient
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private Long idVendedor;
+    // TODO: Descomentar cuando esté disponible el módulo Vendedor
+    // @Transient
+    // @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    // private Long idVendedor;
 
     public SolicitudCredito() {
     }
@@ -190,13 +192,14 @@ public class SolicitudCredito {
         this.clienteProspecto = clienteProspecto;
     }
 
-    public Vendedor getVendedor() {
-        return vendedor;
-    }
+    // TODO: Descomentar cuando esté disponible el módulo Vendedor
+    // public Vendedor getVendedor() {
+    //     return vendedor;
+    // }
 
-    public void setVendedor(Vendedor vendedor) {
-        this.vendedor = vendedor;
-    }
+    // public void setVendedor(Vendedor vendedor) {
+    //     this.vendedor = vendedor;
+    // }
 
     public BigDecimal getEntrada() {
         return entrada;
@@ -230,13 +233,14 @@ public class SolicitudCredito {
         this.idVehiculo = idVehiculo;
     }
 
-    public Long getIdVendedor() {
-        return idVendedor;
-    }
+    // TODO: Descomentar cuando esté disponible el módulo Vendedor
+    // public Long getIdVendedor() {
+    //     return idVendedor;
+    // }
 
-    public void setIdVendedor(Long idVendedor) {
-        this.idVendedor = idVendedor;
-    }
+    // public void setIdVendedor(Long idVendedor) {
+    //     this.idVendedor = idVendedor;
+    // }
 
     @Override
     public int hashCode() {
@@ -272,7 +276,6 @@ public class SolicitudCredito {
                 ", relacionCuotaIngreso=" + relacionCuotaIngreso + ", tasaAnual=" + tasaAnual +
                 ", cuotaMensual=" + cuotaMensual + ", totalPagar=" + totalPagar +
                 ", estado=" + estado + ", entrada=" + entrada +
-                ", version=" + version + ", clienteProspecto=" + clienteProspecto +
-                ", vendedor=" + vendedor + "]";
+                ", version=" + version + ", clienteProspecto=" + clienteProspecto + "]";
     }
 }

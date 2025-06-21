@@ -16,7 +16,7 @@ import com.originacion.contratos.contratos.model.Contrato;
 import com.originacion.contratos.pagares.model.Pagare;
 import com.originacion.contratos.pagares.service.PagareService;
 import com.originacion.contratos.pagares.service.PagareService.CuotaAmortizacion;
-import com.banquito.sistema.originacion.model.SolicitudCredito;
+import com.originacion.contratos.model.SolicitudCredito;
 
 @RestController
 @RequestMapping("/api/pagares")

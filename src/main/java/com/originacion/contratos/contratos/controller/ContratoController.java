@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.originacion.contratos.contratos.model.Contrato;
 import com.originacion.contratos.contratos.service.ContratoService;
-import com.banquito.sistema.originacion.model.SolicitudCredito;
+import com.originacion.contratos.model.SolicitudCredito;
 
 @RestController
 @RequestMapping("/api/contratos")

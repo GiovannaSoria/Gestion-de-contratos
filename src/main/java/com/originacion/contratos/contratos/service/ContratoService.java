@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.originacion.contratos.contratos.exception.ContratoNotFoundException;
 import com.originacion.contratos.contratos.model.Contrato;
 import com.originacion.contratos.contratos.repository.ContratoRepository;
-import com.banquito.sistema.originacion.model.SolicitudCredito;
+import com.originacion.contratos.model.SolicitudCredito;
 import com.originacion.contratos.pagares.service.PagareService;
 import com.originacion.contratos.pagares.exception.PagareGenerationException;
 
