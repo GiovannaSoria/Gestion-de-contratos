@@ -11,11 +11,14 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
-import com.originacion.contratos.pagares.dto.PagareCreateDto;
+//import com.originacion.contratos.pagares.dto.PagareCreateDto;
 import com.originacion.contratos.pagares.dto.PagareDto;
 import com.originacion.contratos.pagares.dto.PagareUpdateDto;
 import com.originacion.contratos.pagares.exception.PagareGenerationException;
 import com.originacion.contratos.pagares.service.PagareService;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,6 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Validated
 public class PagareController {
 
+    private static final Logger log = LoggerFactory.getLogger(PagareController.class);
     private final PagareService service;
 
     public PagareController(PagareService service) {
@@ -48,7 +52,10 @@ public class PagareController {
         @Parameter(description = "ID del pagaré", required = true)
         @PathVariable Long id) {
 
+        log.debug("Solicitud recibida → Obtener Pagaré con ID={}", id);
         PagareDto dto = service.getPagareById(id);
+        log.info("Pagaré con ID={} recuperado correctamente: númeroCuota={}, rutaArchivo='{}'",
+                 id, dto.getNumeroCuota(), dto.getRutaArchivo());
         return ResponseEntity.ok(dto);
     }
 
@@ -82,10 +89,13 @@ public class PagareController {
         @Parameter(description = "ID de la solicitud", required = true)
         @PathVariable Long idSolicitud) {
 
+        log.debug("ENTER GET /api/pagares/solicitud/{} → listar pagarés", idSolicitud);
         List<PagareDto> dtos = service.getPagaresBySolicitud(idSolicitud);
         if (dtos.isEmpty()) {
+            log.warn("No se encontraron pagarés para la solicitud {}", idSolicitud);
             return ResponseEntity.notFound().build();
         }
+        log.info("{} pagarés listados para solicitud {}", dtos.size(), idSolicitud);
         return ResponseEntity.ok(dtos);
     }
 
@@ -129,7 +139,12 @@ public class PagareController {
         )
         @Valid @RequestBody PagareUpdateDto updateDto) {
 
+
+        log.debug("Solicitud recibida → Actualizar Pagaré ID={} con nueva rutaArchivo='{}'",
+                  id, updateDto.getRutaArchivo());
         PagareDto updated = service.updatePagare(id, updateDto);
+        log.info("Pagaré ID={} actualizado correctamente: ahora númeroCuota={}, rutaArchivo='{}'",
+                 id, updated.getNumeroCuota(), updated.getRutaArchivo());
         return ResponseEntity.ok(updated);
     }
 
@@ -144,7 +159,9 @@ public class PagareController {
         @Parameter(description = "ID del pagaré a eliminar", required = true)
         @PathVariable Long id) {
 
+        log.debug("Solicitud recibida → Eliminación lógica de Pagaré ID={}", id);
         service.logicalDeletePagare(id);
+                log.warn("Pagaré ID={} marcado como inactivo (activo=false)", id);
         return ResponseEntity.noContent().build();
     }
 
@@ -162,7 +179,10 @@ public class PagareController {
         @Parameter(description = "Tasa anual (%)",    required = true) @RequestParam BigDecimal tasa,
         @Parameter(description = "Plazo en meses",     required = true) @RequestParam Short plazo) {
 
+        log.debug("Solicitud recibida → Generar {} Pagarés de fallback para solicitud {} (monto={}, tasa={}, plazo={})",
+                  plazo, idSolicitud, monto, tasa, plazo);
         List<PagareDto> dtos = service.generarPagaresDesdeCuotasFallback(idSolicitud, monto, tasa, plazo);
+                log.info("{} Pagarés generados para solicitud {}", dtos.size(), idSolicitud);
         return ResponseEntity.status(HttpStatus.CREATED).body(dtos);
     }
 
@@ -174,8 +194,11 @@ public class PagareController {
     public ResponseEntity<Boolean> existsBySolicitud(
         @Parameter(description = "ID de la solicitud", required = true)
         @PathVariable Long idSolicitud) {
-
-        return ResponseEntity.ok(service.existenPagaresPorSolicitud(idSolicitud));
+        
+        log.debug("ENTER GET /existe/solicitud/{}", idSolicitud);
+        boolean existen = service.existenPagaresPorSolicitud(idSolicitud);
+        log.info("Existencia de pagarés para solicitud {}: {}", idSolicitud, existen);
+        return ResponseEntity.ok(existen);
     }
 
     @Operation(summary = "Elimina todos los pagarés de una solicitud (cancelación)")
@@ -187,7 +210,9 @@ public class PagareController {
         @Parameter(description = "ID de la solicitud", required = true)
         @PathVariable Long idSolicitud) {
 
+        log.debug("ENTER DELETE /solicitud/{} → eliminación física", idSolicitud);
         service.eliminarPagaresPorSolicitud(idSolicitud);
+        log.warn("Pagarés eliminados físicamente para solicitud {}", idSolicitud);
         return ResponseEntity.noContent().build();
     }
 }
