@@ -37,7 +37,6 @@ public class Pagare {
     private Boolean activo = true;
 
     @Version
-    @Column(name = "Version", nullable = false)
     private Long version;
 
     // @ManyToOne
@@ -147,7 +146,7 @@ public class Pagare {
              + ", numeroCuota=" + numeroCuota
              + ", rutaArchivo=" + rutaArchivo
              + ", fechaGenerado=" + fechaGenerado
-             + ", version=" + version
+             //+ ", version=" + version
              + ", activo=" + activo + 
              //+ ", solicitudCredito=" + solicitudCredito + 
              "]";

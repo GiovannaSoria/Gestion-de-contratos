@@ -37,7 +37,7 @@ public class Contrato {
     @Column(name = "condicionespecial", length = 120)
     private String condicionEspecial;
 
-    @Column(name = "version", nullable = false)
+    @Version
     private Long version;
 
     public Contrato() {
@@ -69,7 +69,7 @@ public class Contrato {
                 ", fechaFirma=" + fechaFirma +
                 ", estado=" + estado +
                 ", condicionEspecial='" + condicionEspecial + '\'' +
-                ", version=" + version +
+                //", version=" + version +
                 '}';
     }
 

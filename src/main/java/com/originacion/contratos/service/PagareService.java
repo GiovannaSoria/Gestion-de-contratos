@@ -30,12 +30,18 @@ public class PagareService {
         this.pagareMapper    = pagareMapper;
     }
 
-     //btiene un Pagaré por su ID.
-    @Transactional(readOnly = true)
+     //Obtiene un Pagaré por su ID.
+    @Transactional
     public PagareDto getPagareById(Long id) {
-        Pagare pagare = pagareRepository.findById(id)
-            .orElseThrow(() -> new PagareGenerationException("Pagaré no encontrado: " + id));
-        return pagareMapper.toDto(pagare);
+        try {
+            Pagare pagare = pagareRepository.findById(id)
+                .orElseThrow(() -> new PagareGenerationException("Pagaré no encontrado: " + id));
+            return pagareMapper.toDto(pagare);
+        } catch (PagareGenerationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al obtener el Pagaré: " + id);
+        }
     }
 
     //Crea un nuevo Pagaré, “quemando” el FK en el mapper.
@@ -52,58 +58,76 @@ public class PagareService {
     // }
 
     //Obtiene todos los pagarés de una solicitud, ordenados por número de cuota.
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PagareDto> getPagaresBySolicitud(Long idSolicitud) {
-        var pagares = pagareRepository.findByIdSolicitudOrderByNumeroCuota(idSolicitud);
-        return pagareMapper.toDtoList(pagares);
+        try {
+            var pagares = pagareRepository.findByIdSolicitudOrderByNumeroCuota(idSolicitud);
+            return pagareMapper.toDtoList(pagares);
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al obtener el cronograma de pagarés");
+        }
     }
 
      //Obtiene un Pagaré concreto de una solicitud según su número de cuota.
-    @Transactional(readOnly = true)
+    @Transactional
     public PagareDto getPagareBySolicitudAndCuota(Long idSolicitud, Integer numeroCuota) {
-        return pagareRepository
-            .findByIdSolicitudAndNumeroCuota(idSolicitud, numeroCuota)
-            .map(pagareMapper::toDto)
-            .orElseThrow(() -> 
-                new PagareGenerationException(
-                    "No se encontró el pagaré para solicitud " 
-                    + idSolicitud + " y cuota " + numeroCuota
-                )
-            );
+        try {
+            return pagareRepository
+                .findByIdSolicitudAndNumeroCuota(idSolicitud, numeroCuota)
+                .map(pagareMapper::toDto)
+                .orElseThrow(() -> 
+                    new PagareGenerationException(
+                        "No se encontró el pagaré para solicitud " 
+                        + idSolicitud + " y cuota " + numeroCuota
+                    )
+                );
+        } catch (PagareGenerationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al obtener el pagaré específico");
+        }
     }
 
     //Actualiza un Pagaré existente por el ID
     @Transactional
     public PagareDto updatePagare(Long id, PagareUpdateDto dto) {
-        // Validar que el ID de la ruta y del body coincidan
-        if (!id.equals(dto.getId())) {
-            throw new PagareGenerationException("El ID del path no coincide con el del body");
+        try {
+            if (!id.equals(dto.getId())) {
+                throw new PagareGenerationException("El ID del path no coincide con el del body");
+            }
+
+            Pagare existing = pagareRepository.findById(id)
+                .orElseThrow(() -> new PagareGenerationException("Pagaré no encontrado: " + id));
+
+            pagareMapper.updateEntity(existing, dto);
+            Pagare updated = pagareRepository.save(existing);
+            return pagareMapper.toDto(updated);
+        } catch (PagareGenerationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al actualizar el pagaré: " + id);
         }
-
-        Pagare existing = pagareRepository.findById(id)
-            .orElseThrow(() -> new PagareGenerationException("Pagaré no encontrado: " + id));
-
-        // MapStruct aplica sólo los cambios del UpdateDto, ignora PK, FK, versión y activo
-        pagareMapper.updateEntity(existing, dto);
-
-        Pagare updated = pagareRepository.save(existing);
-        return pagareMapper.toDto(updated);
     }
 
     //Eliminación lógica: marca activo = false y retorna el DTO actualizado.
-    @Transactional
+     @Transactional
     public PagareDto logicalDeletePagare(Long id) {
-        Pagare existing = pagareRepository.findById(id)
-            .orElseThrow(() -> new PagareGenerationException("Pagaré no encontrado: " + id));
+        try {
+            Pagare existing = pagareRepository.findById(id)
+                .orElseThrow(() -> new PagareGenerationException("Pagaré no encontrado: " + id));
 
-        // Uso Boolean.TRUE.equals(...) para evitar NPE
-        if (!Boolean.TRUE.equals(existing.getActivo())) {
-            throw new PagareGenerationException("El pagaré ya está inactivo: " + id);
+            if (!Boolean.TRUE.equals(existing.getActivo())) {
+                throw new PagareGenerationException("El pagaré ya está inactivo: " + id);
+            }
+
+            existing.setActivo(false);
+            Pagare saved = pagareRepository.save(existing);
+            return pagareMapper.toDto(saved);
+        } catch (PagareGenerationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al eliminar lógicamente el pagaré: " + id);
         }
-
-        existing.setActivo(false);
-        Pagare saved = pagareRepository.save(existing);
-        return pagareMapper.toDto(saved);
     }
 
     /**
@@ -116,24 +140,28 @@ public class PagareService {
             BigDecimal montoSolicitado,
             BigDecimal tasaAnual,
             Short plazoMeses) {
+        try {
+            if (pagareRepository.existsByIdSolicitud(idSolicitud)) {
+                throw new PagareGenerationException("Ya existen pagarés para solicitud " + idSolicitud);
+            }
 
-        if (pagareRepository.existsByIdSolicitud(idSolicitud)) {
-            throw new PagareGenerationException("Ya existen pagarés para solicitud " + idSolicitud);
+            List<CuotaDto> tabla = generarTablaDesdeParams(montoSolicitado, tasaAnual, plazoMeses);
+
+            List<Pagare> pagares = new ArrayList<>();
+            for (CuotaDto cuota : tabla) {
+                Pagare p = new Pagare();
+                p.setIdSolicitud(idSolicitud);
+                p.setNumeroCuota(cuota.getNumeroCuota());
+                p.setRutaArchivo(generarRutaPagare(idSolicitud, cuota.getNumeroCuota()));
+                p.setFechaGenerado(LocalDateTime.now());
+                pagares.add(pagareRepository.save(p));
+            }
+            return pagareMapper.toDtoList(pagares);
+        } catch (PagareGenerationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al generar cronograma de pagarés");
         }
-
-        // Llama al helper correcto:
-        List<CuotaDto> tabla = generarTablaDesdeParams(montoSolicitado, tasaAnual, plazoMeses);
-
-        List<Pagare> pagares = new ArrayList<>();
-        for (CuotaDto cuota : tabla) {
-            Pagare p = new Pagare();
-            p.setIdSolicitud(idSolicitud);
-            p.setNumeroCuota(cuota.getNumeroCuota());
-            p.setRutaArchivo(generarRutaPagare(idSolicitud, cuota.getNumeroCuota()));
-            p.setFechaGenerado(LocalDateTime.now());
-            pagares.add(pagareRepository.save(p));
-        }
-        return pagareMapper.toDtoList(pagares);
     }
 
     // === Helpers privados ===
@@ -192,11 +220,19 @@ public class PagareService {
     }
 
     public boolean existenPagaresPorSolicitud(Long idSolicitud) {
-        return pagareRepository.existsByIdSolicitud(idSolicitud);
+        try {
+            return pagareRepository.existsByIdSolicitud(idSolicitud);
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al verificar existencia de pagarés");
+        }
     }
 
     @Transactional
     public void eliminarPagaresPorSolicitud(Long idSolicitud) {
-        pagareRepository.deleteByIdSolicitud(idSolicitud);
+        try {
+            pagareRepository.deleteByIdSolicitud(idSolicitud);
+        } catch (Exception e) {
+            throw new PagareGenerationException("Error al eliminar pagarés de la solicitud");
+        }
     }
 } 
