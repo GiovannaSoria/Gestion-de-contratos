@@ -1,180 +1,214 @@
 package com.originacion.contratos.contratos.service;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
+import com.originacion.contratos.contratos.enums.EstadoContrato;
+import com.originacion.contratos.contratos.exception.BusinessLogicException;
+import com.originacion.contratos.contratos.exception.NotFoundException;
+import com.originacion.contratos.contratos.model.Contrato;
+import com.originacion.contratos.contratos.repository.ContratoRepository;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.originacion.contratos.contratos.exception.ContratoNotFoundException;
-import com.originacion.contratos.contratos.model.Contrato;
-import com.originacion.contratos.contratos.repository.ContratoRepository;
-import com.originacion.contratos.model.SolicitudCredito;
-import com.originacion.contratos.pagares.service.PagareService;
-import com.originacion.contratos.pagares.exception.PagareGenerationException;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
+@Slf4j
+@Transactional
 public class ContratoService {
 
     private final ContratoRepository contratoRepository;
-    private final PagareService pagareService;
 
-    public ContratoService(ContratoRepository contratoRepository, PagareService pagareService) {
+    public ContratoService(ContratoRepository contratoRepository) {
         this.contratoRepository = contratoRepository;
-        this.pagareService = pagareService;
     }
 
-    public Contrato findById(Long id) {
-        return this.contratoRepository.findById(id)
-                .orElseThrow(() -> new ContratoNotFoundException("Contrato con ID: " + id + " no encontrado"));
+    @Transactional(readOnly = true)
+    public Page<Contrato> findAll(Pageable pageable) {
+        log.debug("Buscando todos los contratos con paginación: {}", pageable);
+        return contratoRepository.findAll(pageable);
     }
 
-    public List<Contrato> findAll() {
-        return this.contratoRepository.findAll();
+    @Transactional(readOnly = true)
+    public Page<Contrato> findByEstado(EstadoContrato estado, Pageable pageable) {
+        log.debug("Buscando contratos por estado: {} con paginación: {}", estado, pageable);
+        return contratoRepository.findByEstado(estado, pageable);
     }
 
-    public List<Contrato> findBySolicitudId(Long idSolicitud) {
-        return this.contratoRepository.findByIdSolicitud(idSolicitud);
+    @Transactional(readOnly = true)
+    public Contrato findById(Integer id) {
+        log.debug("Buscando contrato por ID: {}", id);
+        return contratoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException(id.toString(), "Contrato"));
     }
 
-    public List<Contrato> findByEstado(String estado) {
-        return this.contratoRepository.findByEstado(estado);
+    @Transactional(readOnly = true)
+    public Contrato findByIdSolicitud(Integer idSolicitud) {
+        log.debug("Buscando contrato por ID de solicitud: {}", idSolicitud);
+        return contratoRepository.findByIdSolicitud(idSolicitud)
+                .orElseThrow(() -> new NotFoundException(idSolicitud.toString(), "Contrato por solicitud"));
     }
 
-    /**
-     * Genera automáticamente un contrato cuando una solicitud es aprobada
-     * Regla de negocio: Solo se puede generar un contrato para solicitudes APROBADAS
-     */
-    @Transactional
-    public Contrato generarContratoAutomatico(SolicitudCredito solicitudAprobada) {
-        // Validar que la solicitud esté aprobada
-        if (!"Aprobada".equals(solicitudAprobada.getEstado())) {
-            throw new IllegalArgumentException("Solo se pueden generar contratos para solicitudes aprobadas. Estado actual: " + solicitudAprobada.getEstado());
+    public Contrato generarContrato(Integer idSolicitud, LocalDateTime fechaFirma, String condicionEspecial) {
+        log.info("Generando contrato para solicitud: {}", idSolicitud);
+        
+        // Verificar si ya existe un contrato para esta solicitud
+        if (contratoRepository.existsByIdSolicitud(idSolicitud)) {
+            throw new BusinessLogicException("CREAR_CONTRATO", "Ya existe un contrato para la solicitud: " + idSolicitud);
         }
 
-        // Validar que no exista ya un contrato para esta solicitud
-        if (this.contratoRepository.existsByIdSolicitud(solicitudAprobada.getId())) {
-            throw new IllegalArgumentException("Ya existe un contrato para la solicitud ID: " + solicitudAprobada.getId());
-        }
-
-        // Crear el contrato
         Contrato contrato = new Contrato();
-        contrato.setIdSolicitud(solicitudAprobada.getId());
-        contrato.setRutaArchivo(generarRutaArchivo(solicitudAprobada));
+        contrato.setIdSolicitud(idSolicitud);
+        contrato.setRutaArchivo("/contratos/generados/contrato_" + idSolicitud + ".pdf");
         contrato.setFechaGenerado(LocalDateTime.now());
+        // fechaFirma se queda como null hasta que el contrato sea firmado
+        contrato.setEstado(EstadoContrato.DRAFT);
+        contrato.setCondicionEspecial(condicionEspecial);
+        contrato.setVersion(1L);
+
+        return contratoRepository.save(contrato);
+    }
+
+    public Contrato firmarContrato(Integer id) {
+        log.info("Firmando contrato ID: {}", id);
+        
+        Contrato contrato = findById(id);
+        
+        if (contrato.getEstado() != EstadoContrato.DRAFT) {
+            throw new BusinessLogicException("FIRMAR_CONTRATO", 
+                "El contrato debe estar en estado DRAFT para ser firmado. Estado actual: " + contrato.getEstado());
+        }
+
+        contrato.setEstado(EstadoContrato.FIRMADO);
         contrato.setFechaFirma(LocalDateTime.now());
-        contrato.setEstado("Generado");
-        contrato.setCondicionEspecial(generarCondicionesEspeciales(solicitudAprobada));
-
-        // Guardar el contrato
-        Contrato contratoGuardado = this.contratoRepository.save(contrato);
-
-        // Generar automáticamente los pagarés
-        //this.pagareService.generarPagaresAutomaticos(contratoGuardado, solicitudAprobada);
-
-        return contratoGuardado;
-    }
-
-    /**
-     * Registra la firma del contrato
-     * Regla de negocio: Solo se pueden firmar contratos en estado "Generado"
-     */
-    @Transactional
-    public Contrato firmarContrato(Long contratoId) {
-        Contrato contrato = findById(contratoId);
-
-        if (!"Generado".equals(contrato.getEstado())) {
-            throw new IllegalArgumentException("Solo se pueden firmar contratos en estado 'Generado'. Estado actual: " + contrato.getEstado());
-        }
-
-        contrato.setFechaFirma(LocalDateTime.now());
-        contrato.setEstado("Firmado");
-
-        return this.contratoRepository.save(contrato);
-    }
-
-    /**
-     * Anula un contrato
-     * Regla de negocio: Solo se pueden anular contratos que no han sido firmados
-     */
-    @Transactional
-    public Contrato anularContrato(Long contratoId, String motivo) {
-        Contrato contrato = findById(contratoId);
-
-        if ("Firmado".equals(contrato.getEstado())) {
-            throw new IllegalArgumentException("No se pueden anular contratos que ya han sido firmados");
-        }
-
-        contrato.setEstado("Anulado");
-        contrato.setCondicionEspecial("ANULADO - Motivo: " + motivo);
-
-        return this.contratoRepository.save(contrato);
-    }
-
-    /**
-     * Valida si todos los documentos requeridos están adjuntos
-     */
-    public boolean validarDocumentosCompletos(Long idSolicitud) {
-        // Esta lógica se implementaría con DocumentoAdjuntoService
-        // Por ahora devolvemos true para permitir el flujo
-        return true;
-    }
-
-    private String generarRutaArchivo(SolicitudCredito solicitud) {
-        // Generar ruta única basada en ID y timestamp
-        String timestamp = String.valueOf(System.currentTimeMillis());
-        return "/contratos/" + solicitud.getId() + "/contrato_" + timestamp + ".pdf";
-    }
-
-    private String generarCondicionesEspeciales(SolicitudCredito solicitud) {
-        StringBuilder condiciones = new StringBuilder();
         
-        // Agregar condiciones basadas en el monto y plazo
-        if (solicitud.getMontoSolicitado().doubleValue() > 50000) {
-            condiciones.append("Préstamo de alto monto - Requiere garantías adicionales. ");
+        return contratoRepository.save(contrato);
+    }
+
+    public Contrato cancelarContrato(Integer id, String motivo) {
+        log.info("Cancelando contrato ID: {} por motivo: {}", id, motivo);
+        
+        Contrato contrato = findById(id);
+        
+        if (contrato.getEstado() == EstadoContrato.CANCELADO) {
+            throw new BusinessLogicException("CANCELAR_CONTRATO", "El contrato ya está cancelado");
+        }
+
+        contrato.setEstado(EstadoContrato.CANCELADO);
+        contrato.setCondicionEspecial("CANCELADO: " + motivo);
+        
+        return contratoRepository.save(contrato);
+    }
+
+    public Contrato actualizarCondicionEspecial(Integer id, String condicion) {
+        log.info("Actualizando condición especial del contrato ID: {}", id);
+        
+        Contrato contrato = findById(id);
+        
+        if (contrato.getEstado() != EstadoContrato.DRAFT) {
+            throw new BusinessLogicException("ACTUALIZAR_CONDICION", 
+                "Solo se pueden modificar contratos en estado DRAFT. Estado actual: " + contrato.getEstado());
+        }
+
+        contrato.setCondicionEspecial(condicion);
+        
+        return contratoRepository.save(contrato);
+    }
+
+    // PUT - Actualizar contrato completo
+    public Contrato actualizarContrato(Integer id, Integer idSolicitud, String condicionEspecial, LocalDateTime fechaFirma, EstadoContrato estado) {
+        log.info("Actualizando contrato completo ID: {}", id);
+        
+        Contrato contrato = findById(id);
+        
+        // Solo permitir actualización si está en DRAFT
+        if (contrato.getEstado() != EstadoContrato.DRAFT) {
+            throw new BusinessLogicException("ACTUALIZAR_CONTRATO", 
+                "Solo se pueden actualizar contratos en estado DRAFT. Estado actual: " + contrato.getEstado());
+        }
+
+        // Validar que no se cambie a una solicitud que ya tenga contrato
+        if (!contrato.getIdSolicitud().equals(idSolicitud)) {
+            if (contratoRepository.existsByIdSolicitud(idSolicitud)) {
+                throw new BusinessLogicException("ACTUALIZAR_CONTRATO", 
+                    "Ya existe un contrato para la solicitud: " + idSolicitud);
+            }
+            contrato.setIdSolicitud(idSolicitud);
+        }
+
+        // Actualizar campos
+        if (condicionEspecial != null) {
+            contrato.setCondicionEspecial(condicionEspecial);
         }
         
-        if (solicitud.getPlazoMeses() > 60) {
-            condiciones.append("Plazo extendido - Aplican condiciones especiales de seguimiento. ");
+        if (fechaFirma != null) {
+            contrato.setFechaFirma(fechaFirma);
+        }
+        
+        if (estado != null && estado != contrato.getEstado()) {
+            // Solo permitir cambios de estado válidos
+            if (estado == EstadoContrato.FIRMADO && contrato.getEstado() == EstadoContrato.DRAFT) {
+                contrato.setEstado(estado);
+                if (contrato.getFechaFirma() == null) {
+                    contrato.setFechaFirma(LocalDateTime.now());
+                }
+            } else if (estado == EstadoContrato.CANCELADO) {
+                contrato.setEstado(estado);
+            } else {
+                throw new BusinessLogicException("ACTUALIZAR_CONTRATO", 
+                    "Cambio de estado no válido de " + contrato.getEstado() + " a " + estado);
+            }
         }
 
-        // Condiciones basadas en score crediticio
-        if (solicitud.getScoreInterno() != null && solicitud.getScoreInterno().doubleValue() < 650) {
-            condiciones.append("Score crediticio medio - Monitoreo trimestral requerido. ");
-        }
-
-        return condiciones.toString().trim();
+        return contratoRepository.save(contrato);
     }
 
-    /**
-     * Consulta específica para módulo de originación
-     */
-    public Contrato findContratoActivoPorSolicitud(Long idSolicitud) {
-        return this.contratoRepository.findByIdSolicitudAndEstado(idSolicitud, "Firmado")
-                .orElse(null);
+    @Transactional(readOnly = true)
+    public Long contarPorEstado(EstadoContrato estado) {
+        log.debug("Contando contratos por estado: {}", estado);
+        return contratoRepository.countByEstado(estado);
     }
 
-    /**
-     * Método para integración con sistema bancario central
-     */
-    @Transactional
-    public void notificarContratoAlBanco(Long contratoId) {
-        Contrato contrato = findById(contratoId);
+    @Transactional(readOnly = true)
+    public Map<String, Long> obtenerEstadisticasPorEstado() {
+        log.debug("Obteniendo estadísticas por estado");
         
-        if (!"Firmado".equals(contrato.getEstado())) {
-            throw new IllegalArgumentException("Solo se pueden notificar al banco contratos firmados");
+        Map<String, Long> estadisticas = new HashMap<>();
+        estadisticas.put("DRAFT", contarPorEstado(EstadoContrato.DRAFT));
+        estadisticas.put("FIRMADO", contarPorEstado(EstadoContrato.FIRMADO));
+        estadisticas.put("CANCELADO", contarPorEstado(EstadoContrato.CANCELADO));
+        
+        return estadisticas;
+    }
+
+    // DELETE LÓGICO - Cancela el contrato por ID (cambia estado a CANCELADO)
+    public void eliminarLogicamente(Integer id, String motivo) {
+        log.info("Eliminación lógica del contrato ID: {} por motivo: {}", id, motivo);
+        
+        Contrato contrato = findById(id);
+        
+        if (contrato.getEstado() == EstadoContrato.CANCELADO) {
+            throw new BusinessLogicException("ELIMINAR_CONTRATO", "El contrato ya está cancelado");
         }
 
-        // Aquí se implementaría la integración con el sistema bancario central
-        // Por ejemplo, enviar datos del contrato a un servicio REST del banco
+        contrato.setEstado(EstadoContrato.CANCELADO);
+        contrato.setCondicionEspecial("ELIMINADO: " + motivo);
         
-        // Simular procesamiento
-        try {
-            Thread.sleep(100); // Simular latencia de red
-            // En un entorno real, aquí habría una llamada HTTP al banco
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Error al notificar al banco", e);
-        }
+        contratoRepository.save(contrato);
+        log.info("Contrato ID: {} eliminado lógicamente", id);
+    }
+
+    // DELETE FÍSICO - Elimina físicamente el contrato por ID de solicitud
+    public void eliminarFisicamente(Integer idSolicitud) {
+        log.info("Eliminación física del contrato por ID de solicitud: {}", idSolicitud);
+        
+        Contrato contrato = contratoRepository.findByIdSolicitud(idSolicitud)
+                .orElseThrow(() -> new NotFoundException(idSolicitud.toString(), "Contrato por solicitud"));
+        
+        contratoRepository.delete(contrato);
+        log.info("Contrato de solicitud: {} eliminado físicamente de la base de datos", idSolicitud);
     }
 } 
