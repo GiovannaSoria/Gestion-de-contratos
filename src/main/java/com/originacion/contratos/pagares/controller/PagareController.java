@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import com.originacion.contratos.pagares.dto.PagareCreateDto;
 import com.originacion.contratos.pagares.dto.PagareDto;
 import com.originacion.contratos.pagares.dto.PagareUpdateDto;
+import com.originacion.contratos.pagares.exception.PagareGenerationException;
 import com.originacion.contratos.pagares.service.PagareService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -69,6 +70,45 @@ public class PagareController {
     //     PagareDto created = service.createPagare(createDto);
     //     return ResponseEntity.status(HttpStatus.CREATED).body(created);
     // }
+
+    @Operation(summary = "Lista todos los pagarés de una solicitud ordenados por cuota")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Listado de pagarés",
+                     content = @Content(schema = @Schema(implementation = PagareDto.class))),
+        @ApiResponse(responseCode = "404", description = "No existen pagarés para esa solicitud")
+    })
+    @GetMapping("/solicitud/{idSolicitud}")
+    public ResponseEntity<List<PagareDto>> getBySolicitud(
+        @Parameter(description = "ID de la solicitud", required = true)
+        @PathVariable Long idSolicitud) {
+
+        List<PagareDto> dtos = service.getPagaresBySolicitud(idSolicitud);
+        if (dtos.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(dtos);
+    }
+
+    @Operation(summary = "Obtiene un Pagaré de una solicitud por número de cuota")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Pagaré encontrado",
+                     content = @Content(schema = @Schema(implementation = PagareDto.class))),
+        @ApiResponse(responseCode = "404", description = "Pagaré no encontrado")
+    })
+    @GetMapping("/solicitud/{idSolicitud}/cuota/{numeroCuota}")
+    public ResponseEntity<PagareDto> getBySolicitudAndCuota(
+        @Parameter(description = "ID de la solicitud", required = true)
+        @PathVariable Long idSolicitud,
+        @Parameter(description = "Número de cuota", required = true)
+        @PathVariable Integer numeroCuota
+    ) {
+        try {
+            PagareDto dto = service.getPagareBySolicitudAndCuota(idSolicitud, numeroCuota);
+            return ResponseEntity.ok(dto);
+        } catch (PagareGenerationException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
 
     @Operation(summary = "Actualiza un Pagaré existente")
     @ApiResponses({

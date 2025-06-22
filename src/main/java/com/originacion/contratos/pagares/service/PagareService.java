@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.originacion.contratos.pagares.dto.CuotaDto;
-import com.originacion.contratos.pagares.dto.PagareCreateDto;
+//import com.originacion.contratos.pagares.dto.PagareCreateDto;
 import com.originacion.contratos.pagares.dto.PagareDto;
 import com.originacion.contratos.pagares.dto.PagareUpdateDto;
 import com.originacion.contratos.pagares.exception.PagareGenerationException;
@@ -51,6 +51,27 @@ public class PagareService {
     //     // 4) Devolver DTO de respuesta
     //     return pagareMapper.toDto(saved);
     // }
+
+    //Obtiene todos los pagarés de una solicitud, ordenados por número de cuota.
+    @Transactional(readOnly = true)
+    public List<PagareDto> getPagaresBySolicitud(Long idSolicitud) {
+        var pagares = pagareRepository.findByIdSolicitudOrderByNumeroCuota(idSolicitud);
+        return pagareMapper.toDtoList(pagares);
+    }
+
+     //Obtiene un Pagaré concreto de una solicitud según su número de cuota.
+    @Transactional(readOnly = true)
+    public PagareDto getPagareBySolicitudAndCuota(Long idSolicitud, Integer numeroCuota) {
+        return pagareRepository
+            .findByIdSolicitudAndNumeroCuota(idSolicitud, numeroCuota)
+            .map(pagareMapper::toDto)
+            .orElseThrow(() -> 
+                new PagareGenerationException(
+                    "No se encontró el pagaré para solicitud " 
+                    + idSolicitud + " y cuota " + numeroCuota
+                )
+            );
+    }
 
     //Actualiza un Pagaré existente por el ID
     @Transactional

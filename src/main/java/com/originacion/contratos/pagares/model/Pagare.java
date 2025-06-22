@@ -10,7 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import com.originacion.contratos.model.SolicitudCredito;
+//import com.originacion.contratos.model.SolicitudCredito;
 
 @Entity
 @Table(name = "pagares")
@@ -40,9 +40,9 @@ public class Pagare {
     @Column(name = "Version", nullable = false)
     private Long version;
 
-    @ManyToOne
-    @JoinColumn(name = "IdSolicitud", referencedColumnName = "IdSolicitud", insertable = false, updatable = false)
-    private SolicitudCredito solicitudCredito;
+    // @ManyToOne
+    // @JoinColumn(name = "IdSolicitud", referencedColumnName = "IdSolicitud", insertable = false, updatable = false)
+    // private SolicitudCredito solicitudCredito;
 
     public Pagare() {
     }
@@ -99,13 +99,13 @@ public class Pagare {
         this.version = version;
     }
 
-    public SolicitudCredito getSolicitudCredito() {
-        return solicitudCredito;
-    }
+    // public SolicitudCredito getSolicitudCredito() {
+    //     return solicitudCredito;
+    // }
 
-    public void setSolicitudCredito(SolicitudCredito solicitudCredito) {
-        this.solicitudCredito = solicitudCredito;
-    }
+    // public void setSolicitudCredito(SolicitudCredito solicitudCredito) {
+    //     this.solicitudCredito = solicitudCredito;
+    // }
 
     public Boolean getActivo() {
         return activo;
@@ -142,9 +142,15 @@ public class Pagare {
 
     @Override
     public String toString() {
-        return "Pagare [id=" + id + ", idSolicitud=" + idSolicitud + ", numeroCuota=" + numeroCuota
-                + ", rutaArchivo=" + rutaArchivo + ", fechaGenerado=" + fechaGenerado + ", version=" + version
-                + ", solicitudCredito=" + solicitudCredito + "]";
+        return "Pagare [id=" + id
+             + ", idSolicitud=" + idSolicitud
+             + ", numeroCuota=" + numeroCuota
+             + ", rutaArchivo=" + rutaArchivo
+             + ", fechaGenerado=" + fechaGenerado
+             + ", version=" + version
+             + ", activo=" + activo + 
+             //+ ", solicitudCredito=" + solicitudCredito + 
+             "]";
     }
 
 } 
