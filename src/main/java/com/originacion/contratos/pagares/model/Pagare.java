@@ -33,6 +33,9 @@ public class Pagare {
     @Column(name = "FechaGenerado", nullable = false)
     private LocalDateTime fechaGenerado;
 
+    @Column(name="activo", nullable=false)
+    private Boolean activo = true;
+
     @Version
     @Column(name = "Version", nullable = false)
     private Long version;
@@ -104,6 +107,14 @@ public class Pagare {
         this.solicitudCredito = solicitudCredito;
     }
 
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -135,4 +146,5 @@ public class Pagare {
                 + ", rutaArchivo=" + rutaArchivo + ", fechaGenerado=" + fechaGenerado + ", version=" + version
                 + ", solicitudCredito=" + solicitudCredito + "]";
     }
+
 } 

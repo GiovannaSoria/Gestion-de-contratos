@@ -70,7 +70,7 @@ public class ContratoService {
         Contrato contratoGuardado = this.contratoRepository.save(contrato);
 
         // Generar automáticamente los pagarés
-        this.pagareService.generarPagaresAutomaticos(contratoGuardado, solicitudAprobada);
+        //this.pagareService.generarPagaresAutomaticos(contratoGuardado, solicitudAprobada);
 
         return contratoGuardado;
     }
