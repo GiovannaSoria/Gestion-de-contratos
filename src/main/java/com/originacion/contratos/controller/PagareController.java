@@ -111,12 +111,11 @@ public class PagareController {
         @Parameter(description = "Número de cuota", required = true)
         @PathVariable Integer numeroCuota
     ) {
-        try {
-            PagareDto dto = service.getPagareBySolicitudAndCuota(idSolicitud, numeroCuota);
-            return ResponseEntity.ok(dto);
-        } catch (PagareGenerationException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+        log.debug("ENTER GET /api/pagares/solicitud/{}/cuota/{} → obtener pagaré", idSolicitud, numeroCuota);
+        PagareDto dto = service.getPagareBySolicitudAndCuota(idSolicitud, numeroCuota);
+        log.info("Pagaré encontrado para solicitud {} cuota {}: ruta='{}'",
+                 idSolicitud, numeroCuota, dto.getRutaArchivo());
+        return ResponseEntity.ok(dto);
     }
 
     @Operation(summary = "Actualiza un Pagaré existente")
