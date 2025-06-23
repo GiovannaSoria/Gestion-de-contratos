@@ -2,8 +2,6 @@ package com.originacion.contratos.controller;
 
 import com.originacion.contratos.dto.ContratoDTO;
 import com.originacion.contratos.enums.EstadoContrato;
-import com.originacion.contratos.exception.BusinessLogicException;
-import com.originacion.contratos.exception.NotFoundException;
 import com.originacion.contratos.mapper.ContratoMapper;
 import com.originacion.contratos.model.Contrato;
 import com.originacion.contratos.service.ContratoService;
@@ -63,13 +61,8 @@ public class ContratoController {
 
         Page<Contrato> contratos;
         if (estado != null && !estado.isEmpty()) {
-            try {
-                EstadoContrato estadoEnum = EstadoContrato.valueOf(estado.toUpperCase());
-                contratos = contratoService.findByEstado(estadoEnum, pageable);
-            } catch (IllegalArgumentException e) {
-                log.error("Estado inválido proporcionado: {}", estado);
-                return ResponseEntity.badRequest().build();
-            }
+            EstadoContrato estadoEnum = EstadoContrato.valueOf(estado.toUpperCase());
+            contratos = contratoService.findByEstado(estadoEnum, pageable);
         } else {
             contratos = contratoService.findAll(pageable);
         }
@@ -90,13 +83,8 @@ public class ContratoController {
         
         log.info("Solicitando contrato por ID: {}", id);
         
-        try {
-            Contrato contrato = contratoService.findById(id);
-            return ResponseEntity.ok(contratoMapper.toDTO(contrato));
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        }
+        Contrato contrato = contratoService.findById(id);
+        return ResponseEntity.ok(contratoMapper.toDTO(contrato));
     }
 
     @GetMapping("/solicitud/{idSolicitud}")
@@ -111,13 +99,8 @@ public class ContratoController {
         
         log.info("Solicitando contrato por ID de solicitud: {}", idSolicitud);
         
-        try {
-            Contrato contrato = contratoService.findByIdSolicitud(idSolicitud);
-            return ResponseEntity.ok(contratoMapper.toDTO(contrato));
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado para solicitud: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        }
+        Contrato contrato = contratoService.findByIdSolicitud(idSolicitud);
+        return ResponseEntity.ok(contratoMapper.toDTO(contrato));
     }
 
     @PostMapping
@@ -134,20 +117,14 @@ public class ContratoController {
         
         log.info("Generando nuevo contrato para solicitud: {} - RequestId: {}", contratoDTO.getIdSolicitud(), requestId);
         
-        try {
-            Contrato contrato = contratoService.generarContrato(
-                    contratoDTO.getIdSolicitud(),
-                    contratoDTO.getFechaFirma(),
-                    contratoDTO.getCondicionEspecial()
-            );
-            
-            ContratoDTO responseDTO = contratoMapper.toDTO(contrato);
-            return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
-            
-        } catch (BusinessLogicException e) {
-            log.error("Error de negocio al generar contrato: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        Contrato contrato = contratoService.generarContrato(
+                contratoDTO.getIdSolicitud(),
+                contratoDTO.getFechaFirma(),
+                contratoDTO.getCondicionEspecial()
+        );
+        
+        ContratoDTO responseDTO = contratoMapper.toDTO(contrato);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
     @PatchMapping("/{id}/firmar")
@@ -164,16 +141,8 @@ public class ContratoController {
         
         log.info("Firmando contrato ID: {} - RequestId: {}", id, requestId);
         
-        try {
-            Contrato contrato = contratoService.firmarContrato(id);
-            return ResponseEntity.ok(contratoMapper.toDTO(contrato));
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (BusinessLogicException e) {
-            log.error("Error de negocio al firmar contrato: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        Contrato contrato = contratoService.firmarContrato(id);
+        return ResponseEntity.ok(contratoMapper.toDTO(contrato));
     }
 
     @PatchMapping("/{id}/cancelar")
@@ -191,16 +160,8 @@ public class ContratoController {
         
         log.info("Cancelando contrato ID: {} por motivo: {} - RequestId: {}", id, motivo, requestId);
         
-        try {
-            Contrato contrato = contratoService.cancelarContrato(id, motivo);
-            return ResponseEntity.ok(contratoMapper.toDTO(contrato));
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (BusinessLogicException e) {
-            log.error("Error de negocio al cancelar contrato: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        Contrato contrato = contratoService.cancelarContrato(id, motivo);
+        return ResponseEntity.ok(contratoMapper.toDTO(contrato));
     }
 
     @PutMapping("/{id}")
@@ -225,32 +186,20 @@ public class ContratoController {
             return ResponseEntity.badRequest().build();
         }
         
-        try {
-            EstadoContrato estado = null;
-            if (contratoDTO.getEstado() != null) {
-                estado = EstadoContrato.valueOf(contratoDTO.getEstado());
-            }
-            
-            Contrato contrato = contratoService.actualizarContrato(
-                    id,
-                    contratoDTO.getIdSolicitud(),
-                    contratoDTO.getCondicionEspecial(),
-                    contratoDTO.getFechaFirma(),
-                    estado
-            );
-            
-            return ResponseEntity.ok(contratoMapper.toDTO(contrato));
-            
-        } catch (IllegalArgumentException e) {
-            log.error("Estado inválido proporcionado: {}", contratoDTO.getEstado());
-            return ResponseEntity.badRequest().build();
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (BusinessLogicException e) {
-            log.error("Error de negocio al actualizar contrato: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        EstadoContrato estado = null;
+        if (contratoDTO.getEstado() != null) {
+            estado = EstadoContrato.valueOf(contratoDTO.getEstado());
         }
+        
+        Contrato contrato = contratoService.actualizarContrato(
+                id,
+                contratoDTO.getIdSolicitud(),
+                contratoDTO.getCondicionEspecial(),
+                contratoDTO.getFechaFirma(),
+                estado
+        );
+        
+        return ResponseEntity.ok(contratoMapper.toDTO(contrato));
     }
 
     @PatchMapping("/{id}/condicion")
@@ -268,16 +217,8 @@ public class ContratoController {
         
         log.info("Actualizando condición especial del contrato ID: {} - RequestId: {}", id, requestId);
         
-        try {
-            Contrato contrato = contratoService.actualizarCondicionEspecial(id, condicion);
-            return ResponseEntity.ok(contratoMapper.toDTO(contrato));
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (BusinessLogicException e) {
-            log.error("Error de negocio al actualizar condición: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        Contrato contrato = contratoService.actualizarCondicionEspecial(id, condicion);
+        return ResponseEntity.ok(contratoMapper.toDTO(contrato));
     }
 
     @GetMapping("/estadisticas/estado")
@@ -309,16 +250,8 @@ public class ContratoController {
         
         log.info("Eliminación lógica del contrato ID: {} por motivo: {} - RequestId: {}", id, motivo, requestId);
         
-        try {
-            contratoService.eliminarLogicamente(id, motivo);
-            return ResponseEntity.noContent().build();
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (BusinessLogicException e) {
-            log.error("Error de negocio al eliminar contrato: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+        contratoService.eliminarLogicamente(id, motivo);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/solicitud/{idSolicitud}")
@@ -333,25 +266,7 @@ public class ContratoController {
         
         log.info("Eliminación física del contrato por ID de solicitud: {} - RequestId: {}", idSolicitud, requestId);
         
-        try {
-            contratoService.eliminarFisicamente(idSolicitud);
-            return ResponseEntity.noContent().build();
-        } catch (NotFoundException e) {
-            log.error("Contrato no encontrado para solicitud: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @ExceptionHandler({NotFoundException.class})
-    public ResponseEntity<Object> handleNotFound(NotFoundException e) {
-        log.error("Recurso no encontrado: {}", e.getMessage());
-        return ResponseEntity.notFound().build();
-    }
-
-    @ExceptionHandler({BusinessLogicException.class})
-    public ResponseEntity<Object> handleBusinessLogic(BusinessLogicException e) {
-        log.error("Error de lógica de negocio: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(java.util.Map.of("error", e.getMessage()));
+        contratoService.eliminarFisicamente(idSolicitud);
+        return ResponseEntity.noContent().build();
     }
 } 

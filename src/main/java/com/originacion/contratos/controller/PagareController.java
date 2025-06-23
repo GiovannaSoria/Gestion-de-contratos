@@ -13,7 +13,6 @@ import jakarta.validation.Valid;
 
 import com.originacion.contratos.dto.PagareDto;
 import com.originacion.contratos.dto.PagareUpdateDto;
-import com.originacion.contratos.exception.PagareGenerationException;
 import com.originacion.contratos.service.PagareService;
 
 import org.slf4j.Logger;
@@ -125,7 +124,6 @@ public class PagareController {
         @ApiResponse(responseCode = "400", description = "ID path/body no coinciden o datos inválidos"),
         @ApiResponse(responseCode = "404", description = "Pagaré no encontrado")
     })
-
     @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PagareDto> update(
         @Parameter(description = "ID del pagaré a actualizar", required = true)
@@ -136,7 +134,6 @@ public class PagareController {
             content = @Content(schema = @Schema(implementation = PagareUpdateDto.class))
         )
         @Valid @RequestBody PagareUpdateDto updateDto) {
-
 
         log.debug("Solicitud recibida → Actualizar Pagaré ID={} con nueva rutaArchivo='{}'",
                   id, updateDto.getRutaArchivo());
@@ -151,7 +148,6 @@ public class PagareController {
         @ApiResponse(responseCode = "204", description = "Pagaré marcado como inactivo"),
         @ApiResponse(responseCode = "404", description = "Pagaré no encontrado")
     })
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
         @Parameter(description = "ID del pagaré a eliminar", required = true)
@@ -159,7 +155,7 @@ public class PagareController {
 
         log.debug("Solicitud recibida → Eliminación lógica de Pagaré ID={}", id);
         service.logicalDeletePagare(id);
-                log.warn("Pagaré ID={} marcado como inactivo (activo=false)", id);
+        log.warn("Pagaré ID={} marcado como inactivo (activo=false)", id);
         return ResponseEntity.noContent().build();
     }
 
@@ -169,7 +165,6 @@ public class PagareController {
                      content = @Content(schema = @Schema(implementation = PagareDto.class))),
         @ApiResponse(responseCode = "400", description = "Solicitud inválida o ya existen pagarés")
     })
-
     @PostMapping(path = "/automaticos/fallback")
     public ResponseEntity<List<PagareDto>> generateFromCuotasFallback(
         @Parameter(description = "ID de la solicitud", required = true) @RequestParam Long idSolicitud,
@@ -180,7 +175,7 @@ public class PagareController {
         log.debug("Solicitud recibida → Generar {} Pagarés de fallback para solicitud {} (monto={}, tasa={}, plazo={})",
                   plazo, idSolicitud, monto, tasa, plazo);
         List<PagareDto> dtos = service.generarPagaresDesdeCuotasFallback(idSolicitud, monto, tasa, plazo);
-                log.info("{} Pagarés generados para solicitud {}", dtos.size(), idSolicitud);
+        log.info("{} Pagarés generados para solicitud {}", dtos.size(), idSolicitud);
         return ResponseEntity.status(HttpStatus.CREATED).body(dtos);
     }
 
